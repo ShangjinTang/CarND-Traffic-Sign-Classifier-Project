@@ -3,25 +3,21 @@
 
 Overview
 ---
-In this project, you will use what you've learned about deep neural networks and convolutional neural networks to classify traffic signs. You will train and validate a model so it can classify traffic sign images using the [German Traffic Sign Dataset](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset). After the model is trained, you will then try out your model on images of German traffic signs that you find on the web.
+In this project, we use what you've learned about deep neural networks and convolutional neural networks to classify traffic signs. We train and validate a model so it can classify traffic sign images using the [German Traffic Sign Dataset](http://benchmark.ini.rub.de/?section=gtsrb&subsection=dataset). After the model is trained, try out model on images of German traffic signs that you find on the web.
 
-We have included an Ipython notebook that contains further instructions 
-and starter code. Be sure to download the [Ipython notebook](https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project/blob/master/Traffic_Sign_Classifier.ipynb). 
+**Note**: This project is in `Traffic_Sign_Classifier.ipynb` jupyter notebook.
 
-We also want you to create a detailed writeup of the project. Check out the [writeup template](https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project/blob/master/writeup_template.md) for this project and use it as a starting point for creating your own writeup. The writeup can be either a markdown file or a pdf document.
 
-To meet specifications, the project will require submitting three files: 
-* the Ipython notebook with the code
-* the code exported as an html file
-* a writeup report either as a markdown or pdf file 
-
-Creating a Great Writeup
+Libraries Required
 ---
-A great writeup should include the [rubric points](https://review.udacity.com/#!/rubrics/481/view) as well as your description of how you addressed each point.  You should include a detailed description of the code used in each step (with line-number references and code snippets where necessary), and links to other supporting documents or external references.  You should include images in your writeup to demonstrate how your code works with examples.  
+* Python 3.x
+* TensorFlow 1.x
+* numpy
+* opencv
+* matplotlib
+* skimage
+* pandas
 
-All that said, please be concise!  We're not looking for you to write a book here, just a brief description of how you passed each rubric point, and references to the relevant code :). 
-
-You're not required to use markdown for your writeup.  If you use another method please just submit a pdf of your writeup.
 
 The Project
 ---
@@ -33,26 +29,95 @@ The goals / steps of this project are the following:
 * Analyze the softmax probabilities of the new images
 * Summarize the results with a written report
 
-### Dependencies
-This lab requires:
+## Load The Dataset
 
-* [CarND Term1 Starter Kit](https://github.com/udacity/CarND-Term1-Starter-Kit)
+The data is under folder `traffic-signs-data` and already resized with 32x32x3 (RGB values).
 
-The lab environment can be created with CarND Term1 Starter Kit. Click [here](https://github.com/udacity/CarND-Term1-Starter-Kit/blob/master/README.md) for the details.
+## Data Explore
 
-### Dataset and Repository
+### Data Augmentation
 
-1. Download the data set. The classroom has a link to the data set in the "Project Instructions" content. This is a pickled dataset in which we've already resized the images to 32x32. It contains a training, validation and test set.
-2. Clone the project, which contains the Ipython notebook and the writeup template.
-```sh
-git clone https://github.com/udacity/CarND-Traffic-Sign-Classifier-Project
-cd CarND-Traffic-Sign-Classifier-Project
-jupyter notebook Traffic_Sign_Classifier.ipynb
+Original Data Distribution:
+
+![](./notebook_embedded/data_distribution.png)
+
+The labels in training data does not have same probilities, some classes have much more classes than others.
+
+We use data augmentation with opencv `cv2.warpAffine()`.
+
+```python
+image_rotation = cv2.warpAffine(image, rot_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
+image_translation = cv2.warpAffine(image, translate_mat, image.shape[1::-1], flags=cv2.INTER_LINEAR)
 ```
+The rotation image is slightly random rotated (from -10 degress to 10 degress) from the original image.
+The translation image is slightly moved up/down and left/right with 3 pixels.
 
-### Requirements for Submission
-Follow the instructions in the `Traffic_Sign_Classifier.ipynb` notebook and write the project report using the writeup template as a guide, `writeup_template.md`. Submit the project code and writeup document.
+After data augmentation (4000 images in each class):
 
-## How to write a README
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+![](./notebook_embedded/train_data_augmentation.png)
 
+For more data augmentation details, see `data_augment()` function in jupyter notebook.
+
+### Data Preprocessing
+
+Original Images
+
+![](./notebook_embedded/original_images.png)
+
+Original images have some issues, some original images are too dark (low lightness).
+
+- The image is turned to gray scale to reduce noise
+- Tune the contrast of image
+
+After preprocessing, the images is as below:
+
+![](./notebook_embedded/preprocessed_images.png)
+
+**Note**: this step will change shape 32x32x3 to 32x32 (grayscale).
+
+### Data Normalization
+
+The image data should be normalized so that the data has mean zero and equal variance.
+
+For image data, (pixel - 128)/ 128 is a quick way to approximately normalize the data and can be used in this project.
+
+## CNN model
+
+Layers | Input | Output | Activation | Filter
+---|---|---|---|---
+conv1 | 32x32x1 | 32x32x8 | relu | 3x3
+conv2 | 32x32x8 | 32x32x8 | relu | 3x3
+maxpool1 | 32x32x8 |  16x16x8 |  | 2x2
+conv3 | 16x16x8 | 16x16x16 | relu | 3x3
+conv4 | 16x16x16 | 16x16x16 | relu | 3x3
+maxpool2 | 16x16x16 |  8x8x16 |  | 2x2
+conv5 | 8x8x16 | 8x8x32 | relu | 3x3
+conv6 | 8x8x16 | 8x8x32 | relu | 3x3
+conv7 | 8x8x32 | 8x8x8 | relu | 3x3
+flat-fc | 512 | 43 | 
+
+The training time took about 5 minutes on NVIDIA GTX 1060 GPU with 20 epochs.
+
+The model can reach to about 94~95% accuracy on validation images after 20 epochs.
+
+**Note**: Actually we can add some dropout after some convolutional layers and training more time or use a better GPU.
+
+## Prediction on downloaded images
+
+Here we do not use test images from the data, instead, we have download 10 images from web (google) to `real-world-data` folder:
+
+![](./notebook_embedded/real_world_traffic_signs.png)
+
+These images above are not labelled, we need to label then corresponding to `signnames.csv`.
+
+Then we predict the label and get the prediction:
+
+![](./notebook_embedded/real_world_traffic_signs_prediction.png)
+
+The accuracy on 10 test images are 90%.
+
+## Calculate top 5 softmax probilities
+
+Use `tf.nn.softmax()` and `tf.nn.topk()` to get softmax probabilities.
+
+![](./notebook_embedded/real_world_top5_softmax_probabilities.png)
