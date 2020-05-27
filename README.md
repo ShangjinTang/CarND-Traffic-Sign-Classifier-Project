@@ -93,7 +93,7 @@ conv4 | 16x16x16 | 16x16x16 | relu | 3x3
 maxpool2 | 16x16x16 |  8x8x16 |  | 2x2
 conv5 | 8x8x16 | 8x8x32 | relu | 3x3
 conv6 | 8x8x16 | 8x8x32 | relu | 3x3
-conv7 | 8x8x32 | 8x8x8 | relu | 3x3
+conv7 | 8x8x32 | 8x8x8 | relu | 1x1
 flat-fc | 512 | 43 | 
 
 The training time took about 5 minutes on NVIDIA GTX 1060 GPU with 20 epochs.
